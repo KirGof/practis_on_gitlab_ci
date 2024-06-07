@@ -1,0 +1,92 @@
+stages:
+    - build
+    - style_test
+    - integration_test
+    - deploy
+    - sms
+
+job_build:
+    stage: build
+    script:
+        - echo "Building the project"
+        - echo $CI_PROJECT_DIR
+        - mkdir -p $CI_PROJECT_DIR/src/part_2/my_build
+        - cd $CI_PROJECT_DIR/src/part_2/simple_bash/cat
+        - make
+        - cp $CI_PROJECT_DIR/src/part_2/simple_bash/cat/s21_cat $CI_PROJECT_DIR/src/part_2/my_build/
+        - cd $CI_PROJECT_DIR/src/part_2/simple_bash/grep
+        - make
+        - cp $CI_PROJECT_DIR/src/part_2/simple_bash/grep/s21_grep $CI_PROJECT_DIR/src/part_2/my_build/
+    after_script:
+        - echo "Project name $CI_PROJECT_NAME" >> $CI_PROJECT_DIR/res.txt
+        - echo "$CI_JOB_NAME. Status = $CI_JOB_STATUS" >> $CI_PROJECT_DIR/res.txt
+    artifacts:
+        paths:
+            - $CI_PROJECT_DIR/src/part_2/my_build/
+            - $CI_PROJECT_DIR/res.txt
+        expire_in: 30 days
+
+job_style_test:
+    stage: style_test
+    needs:
+    - job: job_build
+    script:
+        - echo "Testing on style the project"
+        - cp materials/linters/.clang-format $CI_PROJECT_DIR/src/part_3/
+        - clang-format -n $CI_PROJECT_DIR/src/part_3/simple_bash/cat/*.c 2>>1.txt
+        - clang-format -n $CI_PROJECT_DIR/src/part_3/simple_bash/grep/*.c 2>>1.txt
+        - rm $CI_PROJECT_DIR/src/part_3/.clang-format
+        - if [[ -s 1.txt  ]]; then exit 1; else exit 0; fi
+        - rm $CI_PROJECT_DIR/1.txt
+    after_script:
+        - echo "$CI_JOB_NAME. Status = $CI_JOB_STATUS" >> $CI_PROJECT_DIR/res.txt
+    artifacts:
+        when: always
+        paths:
+            - $CI_PROJECT_DIR/res.txt
+
+
+job_integration_test:
+    stage: integration_test
+    needs:
+    - job: job_build
+    - job: job_style_test
+    artifacts: true
+    script:
+        - cp $CI_PROJECT_DIR/src/part_2/my_build/s21_cat $CI_PROJECT_DIR/src/part_4/simple_bash/cat
+        - cp $CI_PROJECT_DIR/src/part_2/my_build/s21_grep $CI_PROJECT_DIR/src/part_4/simple_bash/grep
+        - cd $CI_PROJECT_DIR/src/part_4/simple_bash/cat
+        - bash test.sh
+        - cd $CI_PROJECT_DIR/src/part_4/simple_bash/grep
+        - bash test.sh
+    after_script:
+        - echo "$CI_JOB_NAME. Status = $CI_JOB_STATUS" >> $CI_PROJECT_DIR/res.txt
+    artifacts:
+        when: always
+        paths:
+            - $CI_PROJECT_DIR/res.txt
+
+job_deploy:
+    stage: deploy
+    needs:
+    - job: job_build
+    - job: job_integration_test
+    artifacts: true
+    rules:
+        - when: on_success
+    script:
+        - scp $CI_PROJECT_DIR/src/part_2/my_build/s21_cat deploy@192.168.122.234:/usr/local/bin
+        - sleep 5
+        - scp $CI_PROJECT_DIR/src/part_2/my_build/s21_grep deploy@192.168.122.234:/usr/local/bin
+    after_script:
+        - echo "$CI_JOB_NAME. Status = $CI_JOB_STATUS" >> $CI_PROJECT_DIR/res.txt
+    artifacts:
+        when: always
+        paths:
+            - $CI_PROJECT_DIR/res.txt
+
+job_sms:
+    stage: sms
+    when: always
+    script:
+        - bash $CI_PROJECT_DIR/src/part_6/info.sh

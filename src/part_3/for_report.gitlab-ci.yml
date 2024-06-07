@@ -1,0 +1,33 @@
+stages:
+    - build
+    - style_test
+
+job_build:
+    stage: build
+    script:
+        - echo "Building the project"
+        - echo $CI_PROJECT_DIR
+        - mkdir -p $CI_PROJECT_DIR/src/part_2/my_build
+        - cd $CI_PROJECT_DIR/src/part_2/simple_bash/cat
+        - make
+        - cp $CI_PROJECT_DIR/src/part_2/simple_bash/cat/s21_cat $CI_PROJECT_DIR/src/part_2/my_build/
+        - cd $CI_PROJECT_DIR/src/part_2/simple_bash/grep
+        - make
+        - cp $CI_PROJECT_DIR/src/part_2/simple_bash/grep/s21_grep $CI_PROJECT_DIR/src/part_2/my_build/
+    artifacts:
+        paths:
+            - $CI_PROJECT_DIR/src/part_2/my_build/
+        expire_in: 30 days
+
+job_style_test:
+    stage: style_test
+    script:
+        - echo "Testing on style the project"
+        - cp materials/linters/.clang-format $CI_PROJECT_DIR/src/part_3/
+        - clang-format -n $CI_PROJECT_DIR/src/part_3/simple_bash/cat/*.c 2>>1.txt
+        - clang-format -n $CI_PROJECT_DIR/src/part_3/simple_bash/grep/*.c 2>>1.txt
+        - rm $CI_PROJECT_DIR/src/part_3/.clang-format
+        - if [[ -s 1.txt  ]]; then exit 1; else exit 0; fi
+        - rm $CI_PROJECT_DIR/1.txt
+        
+       

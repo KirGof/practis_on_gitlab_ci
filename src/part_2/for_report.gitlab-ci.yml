@@ -1,0 +1,22 @@
+stages:
+    - build
+
+job_build:
+    stage: build
+    script:
+        - echo "Building the project"
+        - echo $CI_PROJECT_DIR
+        - mkdir -p $CI_PROJECT_DIR/src/part_2/my_build
+        - cd $CI_PROJECT_DIR/src/part_2/simple_bash/cat
+        - make
+        - cp $CI_PROJECT_DIR/src/part_2/simple_bash/cat/s21_cat $CI_PROJECT_DIR/src/part_2/my_build/
+        - cd $CI_PROJECT_DIR/src/part_2/simple_bash/grep
+        - make
+        - cp $CI_PROJECT_DIR/src/part_2/simple_bash/grep/s21_grep $CI_PROJECT_DIR/src/part_2/my_build/
+    artifacts:
+        paths:
+            - $CI_PROJECT_DIR/src/part_2/my_build/
+        expire_in: 30 days
+
+
+       
